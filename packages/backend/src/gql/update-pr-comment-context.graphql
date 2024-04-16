@@ -18,7 +18,7 @@ query UpdatePrCommentContext($branchName: String!, $owner: String!, $repository:
         comments(first: 50) {
           totalCount
           nodes {
-            databaseId, createdAt, viewerDidAuthor
+            databaseId, createdAt, viewerDidAuthor, bodyText
           }
         }
       }

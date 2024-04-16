@@ -103,6 +103,8 @@ export type UpdatePrCommentContextQuery = {
             createdAt: string,
             // Did the viewer author this comment.
             viewerDidAuthor: boolean,
+            // Identifies the body of the issue rendered to text.
+            bodyText: string,
           } > | null,
         },
       } > | null,
