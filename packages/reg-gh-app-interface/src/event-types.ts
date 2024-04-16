@@ -24,6 +24,7 @@ export interface CommentToPrBody extends BaseEventBody, ResultMetadata {
   behavior?: PrCommentBehavior;
   reportUrl?: string;
   headOid?: string;
+  name?: string;
 }
 
 export interface UpdateStatusBody extends BaseEventBody {

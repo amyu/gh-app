@@ -39,6 +39,7 @@ export function validateEventBody(input: Partial<CommentToPrEventBody>) {
 }
 
 export interface CommentSeed {
+  name?: string;
   reportUrl?: string;
   failedItemsCount: number;
   newItemsCount: number;
@@ -106,6 +107,9 @@ function longDescription(eventBody: CommentSeed) {
 
 export function createCommentBody(eventBody: CommentSeed) {
   const lines: string[] = [];
+  if (eventBody.name) {
+    lines.push(`**name: ${eventBody.name}.**`);
+  }
   if (eventBody.failedItemsCount === 0 && eventBody.newItemsCount === 0 && eventBody.deletedItemsCount === 0) {
     lines.push(`:sparkles::sparkles: **That's perfect, there is no visual difference!** :sparkles::sparkles:`);
     if (eventBody.reportUrl) {
@@ -165,9 +169,10 @@ export function convert(context: UpdatePrCommentContextQuery, eventBody: Comment
   });
   return prs.reduce((paramList, pr) => {
     const commentsByRegsuit = findCommentsByRegApp(pr);
-    if (!commentsByRegsuit.length) {
+    const commentByName = (pr.comments.nodes || []).find(commentNode => commentNode.bodyText.includes(`**name: ${eventBody.name}.**`));
+    if (!commentsByRegsuit.length || (eventBody.name !== undefined && commentByName === undefined)) {
       return [
-        ...paramList, 
+        ...paramList,
         {
           method: "POST",
           path: `/repos/${repo.nameWithOwner}/issues/${pr.number}/comments`,
@@ -181,6 +186,23 @@ export function convert(context: UpdatePrCommentContextQuery, eventBody: Comment
         case "once":
           return paramList;
         case "new":
+          if (eventBody.name !== undefined && commentByName !== undefined) {
+            return [
+              ...paramList,
+              {
+                method: "DELETE",
+                path: `/repos/${repo.nameWithOwner}/issues/comments/${commentByName.databaseId}`,
+                body: undefined,
+              } as UpdateIssueCommentApiParams,
+              {
+                method: "POST",
+                path: `/repos/${repo.nameWithOwner}/issues/${pr.number}/comments`,
+                body: {
+                  body: createCommentBody(eventBody),
+                },
+              } as UpdateIssueCommentApiParams
+            ];
+          }
           return [
             ...paramList,
             ...commentsByRegsuit.map(c => ({
@@ -198,6 +220,18 @@ export function convert(context: UpdatePrCommentContextQuery, eventBody: Comment
           ];
         case "default":
         default:
+          if (eventBody.name !== undefined && commentByName !== undefined) {
+            return [
+              ...paramList,
+              {
+                method: "PATCH",
+                path: `/repos/${repo.nameWithOwner}/issues/comments/${commentByName.databaseId}`,
+                body: {
+                  body: createCommentBody(eventBody),
+                },
+              } as UpdateIssueCommentApiParams
+            ];
+          }
           return [
             ...paramList,
             {
